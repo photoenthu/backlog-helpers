@@ -1,0 +1,169 @@
+# backlog-helpers — project profile
+#
+# The five backlog skills in .claude/skills/ are written to be project-agnostic.
+# Everything project-specific lives HERE, in one file, so the skills themselves
+# stay copy-pasteable and upgradable.
+#
+# HOW THE SKILLS USE THIS FILE
+#   Every skill reads this file ONCE, at the start of a run, and treats the
+#   values below as authoritative. Where a field is empty or still says TODO,
+#   the skill falls back to the documented default (usually: "do the simple
+#   thing and say so in the report") — it never invents a command or a
+#   deployment procedure.
+#
+# FILL THIS IN FIRST. See README.md for a prompt you can paste into a Claude
+# session that will walk your repo and fill this file in for you.
+
+# ---------------------------------------------------------------------------
+project:
+  # Human name of the project, used in reports.
+  name: "TODO"
+  # One line: what this project is. Helps the skills write sensible specs.
+  description: "TODO"
+  # The branch shipped work lands on.
+  primary_branch: "main"
+  # "auto"  — the skills commit and push without asking (solo repo, trunk-based)
+  # "ask"   — the skills commit, then ask before pushing
+  # "branch"— the skills work on a feature branch and open a PR instead of pushing to primary
+  push_policy: "ask"
+  # Trailer appended to commit messages this tooling creates. Empty = no trailer.
+  commit_trailer: ""
+
+# ---------------------------------------------------------------------------
+backlog:
+  # The skills read and write the backlog ONLY through the new-product-backlog
+  # Python CLI (see README prerequisites). Leave cli_path empty to auto-discover
+  # it from the installed plugin cache; set it if you vendored the CLI.
+  cli_path: ""
+  # Path to the backlog JSON, relative to the repo root. Leave empty to let the
+  # CLI resolve it with `default-path`.
+  path: "docs/backlog/product-backlog.json"
+  # Prefix of your item ids. The skills say "BL-NNN" generically; if yours are
+  # JIRA-123 or ISSUE-42, name the prefix here and the skills will use it.
+  id_prefix: "BL"
+
+# ---------------------------------------------------------------------------
+# Where design artifacts are written. Created on demand if missing.
+artifacts:
+  specs_dir: "docs/superpowers/specs"
+  plans_dir: "docs/superpowers/plans"
+  # Only used when research.enabled is true.
+  research_dir: "docs/research"
+
+# ---------------------------------------------------------------------------
+# The pre-ship verification gate. The skills run EVERY non-empty command here,
+# once, after implementation and before shipping, and refuse to ship on a red.
+# Use the exact command a fresh clone would run — these must match CI.
+verification:
+  tests: ""            # e.g. "pytest -m 'not slow'"  /  "npm test"  /  "go test ./..."
+  lint: ""             # e.g. "ruff check ."          /  "npm run lint"
+  format_check: ""     # e.g. "ruff format --check ." /  "prettier --check ."
+  typecheck: ""        # e.g. "mypy src"              /  "tsc --noEmit"
+  build: ""            # e.g. "npm run build"         /  "cargo build --release"
+  # Any extra gates, run in order after the above.
+  extra: []
+  # Paths where a bug is expensive or irreversible. The skills hand-read the
+  # diff of these files before shipping, on top of the automated gate.
+  safety_critical_paths: []
+    # - "src/payments/"
+    # - "src/**/migrations/"
+
+# ---------------------------------------------------------------------------
+# Step 1.5 impact analysis. The skills walk a built-in generic checklist
+# (config, UI, persistence, callers, scheduled work, observability, tests,
+# docs). Add project-specific surfaces here and name WHERE each one lives, so
+# the agent greps the right place instead of guessing.
+impact_surfaces: []
+  # - name: "Config & schema"
+  #   where: "src/config/schema.py, config/*.yml"
+  #   note: "Every new setting needs a typed field, a default, and an entry in each env file."
+  # - name: "Admin UI"
+  #   where: "src/web/templates/, src/web/routes/"
+  #   note: "A setting a human is meant to control needs a control here. This is the canonical miss."
+  # - name: "Database"
+  #   where: "migrations/"
+  #   note: "A new persisted field needs write path, read path, and a migration for existing rows."
+
+# ---------------------------------------------------------------------------
+# How shipped work reaches its running environment. This is the ONLY place
+# deployment is described. If `procedure` is empty, the skills treat
+# "committed and pushed" as shipped and say so plainly in the report.
+deployment:
+  # Free text, written as instructions to an agent. Be concrete and literal.
+  procedure: ""
+    # e.g. |
+    #   1. Push to main. CI builds and deploys automatically; nothing else to do.
+    #   2. If you changed anything under infra/, run `make deploy-infra` and
+    #      confirm the output ends with "0 failed".
+  # How to confirm the deploy actually landed.
+  verify: ""
+    # e.g. "curl -fsS https://example.internal/healthz && echo OK"
+  # Times or conditions when deploying is unsafe, and what to do instead.
+  timing_cautions: ""
+  # How to undo this deploy, in one or two concrete steps.
+  revert: ""
+  # Optional: if the project gates new work behind flags or staged rollout,
+  # describe the convention here. Leave empty and the skills ship features ON.
+  rollout_notes: ""
+
+# ---------------------------------------------------------------------------
+# Where a human can SEE a shipped feature working. The skills fold telemetry
+# into a unit when a feature would otherwise be invisible, and every final
+# report names one of these surfaces so the operator knows where to look.
+observability:
+  surfaces: []
+    # - "The app log at /var/log/app.log — grep for the feature name"
+    # - "The admin dashboard at http://localhost:3000/status"
+    # - "The nightly summary email"
+
+# ---------------------------------------------------------------------------
+# THE RESEARCH HOOK.
+#
+# Out of the box this is OFF, and the skills do no domain research at all —
+# they design from the codebase's own conventions and the backlog row's intent.
+#
+# Turn it on ONLY if your project has a real domain where correctness is a
+# subject-matter question rather than a software question, AND you have a
+# corpus or procedure worth consulting. Then write `procedure` as literal
+# instructions: where the corpus lives, which tools to use, how to search it,
+# and what "grounded" means here.
+#
+# Used by: semiauto-backlog-execution and pr-from-backlog.
+# Ignored by: no-research-backlog-execution (which never researches, by design).
+research:
+  enabled: false
+  # What counts as a "domain-touching" item in this project — the classifier
+  # the skills use to decide whether the research step fires at all.
+  domain_definition: ""
+  # The literal research procedure. Numbered steps.
+  procedure: ""
+  # Whether to run a premise-verification fork after research (check that the
+  # backlog item's core claim survives what the research says, and archive or
+  # reshape it if not). Only meaningful when enabled is true.
+  premise_fork: false
+  # Whether to add a second, domain-expert spec review alongside the technical
+  # architect review. Only meaningful when enabled is true.
+  domain_expert_review: false
+  # If your domain has separately-governed sub-areas whose doctrine must NOT be
+  # mixed (e.g. independent product lines, independent strategies), list them
+  # here with a one-line scope note. The skills will scope research to the one
+  # the item touches instead of researching "the domain" broadly.
+  scopes: []
+
+# ---------------------------------------------------------------------------
+# Extra reasons a fully-autonomous run (pr-from-backlog) must stop and ask.
+# The built-in triggers are always active: visual/UI design, genuinely blocked,
+# destructive or irreversible operations, and creating any new backlog row.
+escalation:
+  extra_triggers: []
+    # - "Anything that would send email to real customers"
+    # - "Any change to billing or pricing code"
+
+# ---------------------------------------------------------------------------
+operator:
+  # "novice" — the plain-language closing checklist is mandatory and jargon-free
+  # "expert" — the closing checklist may use project vocabulary and stay terse
+  expertise: "novice"
+  # Extra reply phrases beyond the built-in `turn off <ID>` and
+  # `redo <ID> as <X>`, as "phrase: what it means".
+  extra_reply_phrases: []
